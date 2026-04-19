@@ -1,0 +1,168 @@
+//RFID Scanner to Microsoft Excel
+//Hardware used: Arduino UNO, I2C LCD Display, RFID-RC522, 1xGreen LED, 1xRed LED, 1xBuzzer, 3x220k Resistor, RFID Tags, 9V Battery, Jumper wires
+//Last Edited: January 24, 2026
+
+#include <SPI.h>
+#include <MFRC522.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+#define SS_PIN 10
+#define RST_PIN 9
+
+MFRC522 mfrc522(SS_PIN, RST_PIN);
+
+// I2C LCD address (0x27 or 0x3F)
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+
+byte Name1[4]={0xA3,0x09,0x6C,0x21};
+byte Name2[4]={0xA3,0x93,0x82,0x22};
+byte Name3[4]={0x29,0x15,0xBB,0x03};
+byte Name4[4]={0x45,0xC8,0xB8,0x03};
+
+
+int NumbCard[4]={0,0,0,0};
+int j=0;
+
+
+int const RedLed = 6;
+int const GreenLed = 5;
+int const Buzzer = 8;
+
+
+String Name;
+long Number;
+int n=0;
+
+
+void setup() {
+  Serial.begin(9600);
+  SPI.begin();
+  mfrc522.PCD_Init();
+
+
+  pinMode(RedLed, OUTPUT);
+  pinMode(GreenLed, OUTPUT);
+  pinMode(Buzzer, OUTPUT);
+
+
+  lcd.init();
+  lcd.backlight();
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("Scan your plant!");
+  lcd.setCursor(0,1);
+  lcd.print("...");
+
+
+  Serial.println("CLEARSHEET");
+  Serial.println("LABEL,Date,Time,Name,Number");
+}
+
+
+void loop() {
+
+
+  if (!mfrc522.PICC_IsNewCardPresent()) return;
+  if (!mfrc522.PICC_ReadCardSerial()) return;
+
+
+  // Identify card
+  if (!memcmp(mfrc522.uid.uidByte, Name1, 4)) {
+    Name = "WHEAT"; Number = 123456; j = 0;
+  }
+  else if (!memcmp(mfrc522.uid.uidByte, Name2, 4)) {
+    Name = "BROCOLLI"; Number = 789101; j = 1;
+  }
+  else if (!memcmp(mfrc522.uid.uidByte, Name3, 4)) {
+    Name = "PECHAY"; Number = 11725; j = 2;
+  }
+  else if (!memcmp(mfrc522.uid.uidByte, Name4, 4)) {
+    Name = "CUCUMBER"; Number = 30501; j = 3;
+  }
+  else {
+    // Unknown card
+    digitalWrite(GreenLed, LOW);
+    digitalWrite(RedLed, HIGH);
+
+
+    lcd.clear();
+    lcd.setCursor(0,0); lcd.print("Unknown card");
+    lcd.setCursor(0,1); lcd.print("Try again");
+
+
+    // Long beep
+    digitalWrite(Buzzer,HIGH);
+    delay(300);
+    digitalWrite(Buzzer,LOW);
+
+
+    delay(2000);
+    digitalWrite(RedLed, LOW);
+    lcd.clear();
+    lcd.setCursor(0,0); lcd.print("Scan your plant");
+    return;
+  }
+
+
+  // Card recognized
+  if (NumbCard[j] == 1) {
+    // Already registered
+    lcd.clear();
+    lcd.setCursor(0,0); lcd.print("Already");
+    lcd.setCursor(0,1); lcd.print("Scanned!");
+
+
+    digitalWrite(GreenLed, LOW);
+    digitalWrite(RedLed, HIGH);
+
+
+    // Short beep
+    digitalWrite(Buzzer,HIGH);
+    delay(150);
+    digitalWrite(Buzzer,LOW);
+
+
+    delay(2000);
+    digitalWrite(RedLed, LOW);
+  }
+  else {
+    // First-time valid card
+    NumbCard[j] = 1;
+    n++;
+
+
+    Serial.print("DATA,DATE,TIME," + Name);
+    Serial.print(",");
+    Serial.println(Number);
+
+
+    lcd.clear();
+    lcd.setCursor(0,0); lcd.print("Name:");
+    lcd.print(Name);
+    lcd.setCursor(0,1); lcd.print("No:");
+    lcd.print(Number);
+
+
+    digitalWrite(GreenLed,HIGH);
+    digitalWrite(RedLed, LOW);
+
+
+    // Short beep
+    digitalWrite(Buzzer,HIGH);
+    delay(100);
+    digitalWrite(Buzzer,LOW);
+
+
+    Serial.println("SAVEWORKBOOKAS,Names/WorkNames");
+
+
+    delay(2000);
+    digitalWrite(GreenLed,LOW);
+  }
+
+
+  // Reset LCD prompt
+  lcd.clear();
+  lcd.setCursor(0,0); lcd.print("Scan your plant!");
+}
