@@ -1,0 +1,112 @@
+//Hardwares: HC-SR04 Ultrasonic Sensor, L298N Driver, and Arduino UNO;
+//Distance Threshold = 20cm;
+//Last Modified: Nov. 30, 2025
+
+
+
+#define ENA 9
+#define IN1 2
+#define IN2 3
+#define IN3 4
+#define IN4 5
+#define ENB 10
+
+
+
+#define TRIG 6
+#define ECHO 7
+
+
+void setup() {
+  pinMode(ENA, OUTPUT);
+  pinMode(IN1, OUTPUT);
+  pinMode(IN2, OUTPUT);
+
+
+  pinMode(IN3, OUTPUT);
+  pinMode(IN4, OUTPUT);
+  pinMode(ENB, OUTPUT);
+
+
+  pinMode(TRIG, OUTPUT);
+  pinMode(ECHO, INPUT);
+
+
+  Serial.begin(9600);
+}
+
+
+int getDistance() {
+  digitalWrite(TRIG, LOW);
+  delayMicroseconds(2);
+  digitalWrite(TRIG, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG, LOW);
+
+
+  long duration = pulseIn(ECHO, HIGH, 25000); // 25ms timeout
+
+
+  if (duration == 0) return 999; // No echo
+  int distance = duration * 0.034 / 2;
+
+
+  if (distance < 3 || distance > 300) return 999; // Ignore false readings
+  return distance;
+}
+
+
+void moveForward() {
+  analogWrite(ENA, 200);
+  analogWrite(ENB, 200);
+
+
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, HIGH);
+
+
+  digitalWrite(IN3, LOW);
+  digitalWrite(IN4, HIGH);
+}
+
+
+void turnLeft() {
+  analogWrite(ENA, 200);
+  analogWrite(ENB, 200);
+
+
+  // Left turn → Left motor backward, Right motor forward
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, HIGH);
+
+
+  digitalWrite(IN3, HIGH);
+  digitalWrite(IN4, LOW);
+}
+
+
+void stopCar() {
+  digitalWrite(IN1, LOW);
+  digitalWrite(IN2, LOW);
+  digitalWrite(IN3, LOW);
+  digitalWrite(IN4, LOW);
+}
+
+void loop() {
+  int d = getDistance();
+  Serial.println(d);
+
+
+  if (d > 20) {     // Updated distance threshold to 20 cm
+    moveForward();
+  } else {
+    stopCar();
+    delay(150);
+    turnLeft();      // turn left when obstacle detected
+    delay(400);      // adjust duration to control turn angle
+    stopCar();
+    delay(150);
+  }
+}
+
+
