@@ -1,0 +1,130 @@
+
+//   L298N Dual Motor Driver
+//   Motor A = Left
+//   Motor B = Right
+
+
+const int IN1 = 2;   // L298N IN1
+const int IN2 = 3;   // L298N IN2
+const int ENA = 9;   // L298N ENA (PWM)
+
+
+const int IN3 = 4;   // L298N IN3
+const int IN4 = 5;   // L298N IN4
+const int ENB = 10;   // L298N ENB (PWM)
+
+
+char key = 'S';              // Default state: stopped
+int motorSpeed = 255;        // Default speed (0–255)
+
+
+void setup() {
+  pinMode(IN1, OUTPUT);
+  pinMode(IN2, OUTPUT);
+  pinMode(IN3, OUTPUT);
+  pinMode(IN4, OUTPUT);
+  pinMode(ENA, OUTPUT);
+  pinMode(ENB, OUTPUT);
+
+
+  Serial.begin(9600);
+  Serial.println("Serial RC Car Ready.");
+  Serial.println("Controls:");
+  Serial.println("F = forward, B = back");
+  Serial.println("I = forward-left, G = forward-right");
+  Serial.println("H = back-left, J = back-right");
+  Serial.println("L = pivot left, R = pivot right");
+  Serial.println("X = stop");
+  Serial.println("0–9 = set speed");
+}
+
+
+void loop() {
+  if (Serial.available() > 0) {
+    char incoming = Serial.read();
+    Serial.println(incoming);
+
+
+    if (isdigit(incoming)) {
+      int level = incoming - '0';
+      motorSpeed = map(level, 0, 9, 0, 255);
+      Serial.print("Speed set to: ");
+      Serial.println(motorSpeed);
+    } else {
+      key = toupper(incoming);  // Make sure lowercase inputs also work
+    }
+  }
+
+
+  switch (key) {
+    case 'R': moveForward();   break;
+    case 'L': moveBackward();  break;
+    case 'I': forwardLeft();   break;
+    case 'G': forwardRight();  break;
+    case 'J': backLeft();      break;
+    case 'H': backRight();     break;
+    case 'B': pivotLeft();     break;
+    case 'F': pivotRight();    break;
+    case 'X': stopMotors();    break;
+    default:  stopMotors();    break;
+  }
+}
+
+
+void moveForward() {
+  setMotors(HIGH, LOW, HIGH, LOW, motorSpeed, motorSpeed);
+}
+
+
+void moveBackward() {
+  setMotors(LOW, HIGH, LOW, HIGH, motorSpeed, motorSpeed);
+}
+
+
+void forwardLeft() {
+  setMotors(HIGH, LOW, HIGH, LOW, motorSpeed, motorSpeed * 0.35);
+}
+
+
+void forwardRight() {
+  setMotors(LOW, HIGH, LOW, HIGH, motorSpeed * 0.35, motorSpeed);
+}
+
+
+void backLeft() {
+  setMotors(LOW, HIGH, LOW, HIGH, motorSpeed * 0.35, motorSpeed);
+}
+
+
+void backRight() {
+  setMotors(LOW, HIGH, LOW, HIGH, motorSpeed, motorSpeed * 0.35);
+}
+
+
+void pivotLeft() {
+  setMotors(LOW, HIGH, HIGH, LOW, motorSpeed, motorSpeed);
+}
+
+
+void pivotRight() {
+  setMotors(HIGH, LOW, LOW, HIGH, motorSpeed, motorSpeed);
+}
+
+
+void stopMotors() {
+  setMotors(LOW, LOW, LOW, LOW, 0, 0);
+}
+
+
+void setMotors(int m1p1, int m1p2, int m2p1, int m2p2, int speedA, int speedB) {
+
+  digitalWrite(IN1, m1p1);
+  digitalWrite(IN2, m1p2);
+  analogWrite(ENA, constrain(speedA, 0, 255));
+
+
+
+  digitalWrite(IN3, m2p1);
+  digitalWrite(IN4, m2p2);
+  analogWrite(ENB, constrain(speedB, 0, 255));
+}
